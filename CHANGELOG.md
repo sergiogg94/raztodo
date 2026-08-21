@@ -1,13 +1,19 @@
 # Changelog
 
-## [0.10.0] - 2026-08-21
+## [0.10.0] - 2026-08-22
 
 ### Added
 
-* Full Docker support: image now includes the Web UI (`rt-web`) alongside the CLI, with persistent SQLite via a `/data` volume
-* `compose.yaml` with `web` and `cli` services sharing a named volume
-* `docker-entrypoint.sh` dispatches `rt` and `rt-web` based on the container command
-* `RAZTODO_WEB_HOST` / `RAZTODO_WEB_PORT` environment variables to configure the Web UI bind address and port
+- Full Docker support with Web UI (`rt-web`) and persistent SQLite storage via `/data`
+- Added `compose.yaml` for CLI and Web UI with shared persistent storage
+- Added `docker-entrypoint.sh` for dispatching `rt` and `rt-web`
+- Added `RAZTODO_WEB_HOST` / `RAZTODO_WEB_PORT` configuration for the Web UI
+
+### Changed
+
+- Replaced the native priority `<select>` with a custom priority picker in the Web UI
+- Modularized the Web UI stylesheet into dedicated CSS modules
+- Updated architecture documentation to reflect the new CSS module structure
 
 ---
 
