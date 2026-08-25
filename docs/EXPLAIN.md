@@ -136,11 +136,3 @@ OLLAMA_MODEL=qwen2.5-coder:3b rt explain 5 --deep
 | `Model 'X' not found` | Model not downloaded | Run `ollama pull X` |
 | `Ollama returned HTTP 404` | Wrong model name | Run `ollama list` to see available models, then `rt explain --config --model <name>` |
 | Slow response | Large model or low-end hardware | Try a smaller model (`ollama pull mistral`) or increase `--timeout` |
-
-## Web UI
-
-If you install the optional `web` extra, the local web UI (`rt-web`) also includes an
-**Explain** button on each task that opens a modal with the same three modes
-(Summary, Deep Analysis, Action Plan). Responses stream in token-by-token, so you see
-output immediately as the model generates it. Ollama must be configured and running
-for this feature to work, following the same setup instructions above.

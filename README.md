@@ -3,7 +3,7 @@
 
 # RazTodo
 
-**A local-first task manager for developers with a native CLI, optional Web UI, and local AI assistance powered by Ollama.**
+**A local-first task manager for developers, with a native CLI and local AI assistance powered by Ollama.**
 
 <br>
 
@@ -19,65 +19,71 @@
 ## Preview
 
 <p align="center">
-  <b>CLI</b>
-</p>
-
-<p align="center">
   <img src="https://github.com/razbuild/raztodo/raw/main/assets/preview.gif" width="700">
 </p>
 
 <p align="center">
-  <i>Local AI assistance powered by Ollama</i>
-</p>
-
-<p align="center">
-  <b>Web UI</b>
-</p>
-
-<p align="center">
-  <img src="https://github.com/razbuild/raztodo/raw/main/assets/web-preview.png" width="700">
-</p>
-
-<p align="center">
-  <i>CLI + optional Web UI powered by FastAPI</i>
+  <i>A command-line task manager powered by SQLite, with optional AI-assisted task explanations via Ollama.</i>
 </p>
 
 ---
 
 ## Why RazTodo
 
-Most task managers are either web-first, cloud-dependent, or tied to a single interface. RazTodo keeps everything local while letting you manage the same tasks from a native CLI or an optional Web UI.
+Most task managers pull you into a browser tab or a cloud account just to jot down a to-do. RazTodo stays entirely in your terminal, backed by a single local SQLite database, with no accounts, no telemetry, and no background services.
 
 ### Highlights
 
 - 💻 Native CLI built for daily terminal workflows
-- 🌐 Optional Web UI backed by the same local database
-- 🤖 Local AI assistance powered by Ollama
-- 🗄️ Single SQLite database shared across all interfaces
+- 🗄️ Single local SQLite database, your data never leaves your machine
+- 🤖 Optional local AI task explanations powered by Ollama
 - 🔒 No cloud services, accounts, or telemetry
 - ⚡ Fast startup with zero background services
+- ⌨️ Shell completion for bash, zsh, and fish
+- 🌐 Optional Web UI via the companion [raztodo-web](https://pypi.org/project/raztodo-web/) package
 
 ### Architecture
 
+RazTodo follows a layered architecture, keeping the core task-management logic independent of any interface:
+
 ```
-CLI ─┐
-     ├── Core Engine ─── SQLite
-Web ─┘
+src/raztodo/
+├── application/     # use cases / orchestration
+├── domain/          # core task model and business rules
+├── infrastructure/  # SQLite, settings, logging, LLM (Ollama) integration
+└── presentation/
+    └── cli/         # the `rt` command-line interface
 ```
 
-Both the CLI and Web UI use the same core engine and SQLite database, so every interface stays synchronized automatically.
-
-The architecture follows three design principles:
-
-- **Separation of concerns** core logic is independent of the user interface.
-- **Local-first storage** all data stays on your machine.
-- **Composable interfaces** use only the interfaces you need.
+- **Separation of concerns**: core logic is independent of the CLI.
+- **Local-first storage**: all data stays on your machine in SQLite.
 
 ---
 
 ## Quick Start
 
-### CLI
+### Installation
+
+```bash
+# Recommended (pipx)
+pipx install raztodo
+
+# No-install (uv)
+uvx --from raztodo rt
+
+# Standard install
+pip install raztodo
+
+# Shell completion (optional)
+pip install "raztodo[completion]"
+
+# Web UI (optional, separate package)
+pip install raztodo-web
+```
+
+For virtual environment and source installation, see the [Installation Guide](https://github.com/razbuild/raztodo/blob/main/docs/INSTALLATION.md).
+
+### Basic Usage
 
 ```bash
 # Add a task
@@ -99,24 +105,6 @@ rt update 1 --title "Weekly groceries: milk, vegetables, essentials"
 rt remove 1
 ```
 
-### Web UI
-
-Start the server:
-
-```bash
-rt-web
-```
-
-Then open `http://127.0.0.1:8000`.
-
-> [!NOTE]
-> Runs locally only (not exposed to the internet)
-> Single-user design with no authentication layer
-> CLI and Web UI share one SQLite database (real-time sync)
-> Local-first architecture optimized for personal use
-> Built with FastAPI + lightweight static frontend
-> AI-powered task explanations (Summary / Deep Analysis / Action Plan) via Ollama
-
 ### Shell Completion
 
 ```bash
@@ -124,58 +112,7 @@ Then open `http://127.0.0.1:8000`.
 eval "$(rt completion bash)"
 ```
 
-Supports bash, zsh, and fish. For permanent setup see the [Completion Guide](https://github.com/razbuild/raztodo/blob/main/docs/COMPLETION.md).
-
----
-
-## LLM Integration
-
-RazTodo integrates with Ollama to provide optional local AI assistance for your tasks. Every explanation runs locally using your own LLM, keeping your data private.
-
-Available explanation modes:
-
-- `--short` — concise summary of the task
-- `--plan` — actionable step-by-step plan
-- `--deep` — detailed analysis and recommendations
-
-Example:
-
-```bash
-rt explain 1 --short
-rt explain 1 --plan
-rt explain 1 --deep
-```
-
-> [!NOTE]
-> Requires Ollama with a compatible local model. All AI processing is performed locally.
-
-📖 See the [Explain Guide](https://github.com/razbuild/raztodo/blob/main/docs/EXPLAIN.md) for installation, configuration, supported models, and usage examples.
-
----
-
-## Installation
-
-```bash
-# Recommended (pipx)
-pipx install raztodo
-
-# No-install (uv)
-uvx --from raztodo rt
-
-# Standard install
-pip install raztodo
-
-# Web UI (optional)
-pip install "raztodo[web]"
-
-# Shell completion (optional)
-pip install "raztodo[completion]"
-
-# Everything (web + completion)
-pip install "raztodo[all]"
-```
-
-For virtual environment and source installation, see the [Installation Guide](https://github.com/razbuild/raztodo/blob/main/docs/INSTALLATION.md).
+Supports bash, zsh, and fish. For permanent setup, see the [Completion Guide](https://github.com/razbuild/raztodo/blob/main/docs/COMPLETION.md).
 
 ---
 
@@ -194,7 +131,7 @@ For virtual environment and source installation, see the [Installation Guide](ht
 | `migrate`    | Run database migrations          | `rt migrate`                       |
 | `clear`      | Delete all tasks                 | `rt clear --confirm`               |
 | `completion` | Output shell completion script   | `rt completion bash`               |
-| `explain`    | Get an AI explanation of a task  | `rt explain 1 --plan`              |
+| `explain`    | Explain a task using AI (requires Ollama) | `rt explain 1 --plan`     |
 
 ```bash
 rt --help
@@ -202,6 +139,23 @@ rt add --help
 ```
 
 📖 See the [Usage Guide](https://github.com/razbuild/raztodo/blob/main/docs/USAGE.md) for full command documentation.
+
+---
+
+## AI / Ollama Integration
+
+RazTodo can optionally use [Ollama](https://ollama.com) to explain a task locally, no data leaves your machine.
+
+```bash
+rt explain 1 --short   # concise summary
+rt explain 1 --plan    # actionable step-by-step plan
+rt explain 1 --deep    # detailed analysis and recommendations
+```
+
+> [!NOTE]
+> Requires Ollama with a compatible local model. All AI processing runs locally.
+
+📖 See the [Explain Guide](https://github.com/razbuild/raztodo/blob/main/docs/EXPLAIN.md) for installation, configuration, supported models, and usage examples.
 
 ---
 
@@ -217,38 +171,37 @@ export RAZTODO_DB="/path/to/custom.db"
 export LOG_LEVEL="DEBUG"
 ```
 
-> [!TIP]
-> 📖 See the [Configuration Guide](https://github.com/razbuild/raztodo/blob/main/docs/CONFIGURATION.md)
+📖 See the [Configuration Guide](https://github.com/razbuild/raztodo/blob/main/docs/CONFIGURATION.md).
 
 ---
 
 ## Docker
 
-An optional Docker image covers the **CLI** and the **Web UI** with persistent SQLite storage.
+An optional Docker image runs RazTodo's CLI (`rt`) directly as the container entrypoint.
 
 ```bash
-docker build -t raztodo:local .
+docker build \
+  --build-arg USER_UID=$(id -u) \
+  --build-arg USER_GID=$(id -g) \
+  -t raztodo:local .
 ```
 
-CLI:
-
 ```bash
-docker run --rm -it -v "$HOME/raztodo-data:/data" raztodo:local add "My first docker task"
-```
+docker run --rm raztodo:local --help
 
-Web UI (via Compose):
+docker run --rm \
+  -v raztodo-data:/data \
+  raztodo:local add "Buy milk"
 
-```bash
-docker compose up -d web
-# open http://localhost:8000
+docker run --rm \
+  -v raztodo-data:/data \
+  raztodo:local list
 ```
 
 > [!NOTE]
-> The image stores the database in `/data`; mount a host folder or use the Compose named volume to persist data.
-> CLI and Web UI share the same database when they use the same `/data` volume.
+> The container stores its SQLite database in `/data` (`RAZTODO_DB=/data/tasks.db`). Mount a named volume or host folder there to persist data between runs. The image runs as a non-root user.
 
-> [!TIP]
-> 📖 See the [Docker Guide](https://github.com/razbuild/raztodo/blob/main/docs/DOCKER.md)
+📖 See the [Docker Guide](https://github.com/razbuild/raztodo/blob/main/docs/DOCKER.md).
 
 ---
 
@@ -265,7 +218,6 @@ docker compose up -d web
 - 🐳 [Docker Guide](https://github.com/razbuild/raztodo/blob/main/docs/DOCKER.md)
 - 🏗️ [Architecture](https://github.com/razbuild/raztodo/blob/main/docs/ARCHITECTURE.md)
 - 🧪 [Testing](https://github.com/razbuild/raztodo/blob/main/docs/TESTING.md)
-- 📝 [Changelog](https://github.com/razbuild/raztodo/blob/main/CHANGELOG.md)
 
 ---
 
@@ -273,7 +225,8 @@ docker compose up -d web
 
 RazTodo is part of the [RazBuild](https://github.com/razbuild) ecosystem of open-source developer tools.
 
-- [RazTint](https://github.com/razbuild/raztint) Zero-dependency ANSI colors, icons, and terminal formatting utilities powering RazTodo's CLI output.
+- [RazTint](https://github.com/razbuild/raztint): Zero-dependency ANSI colors, icons, and terminal formatting utilities powering RazTodo's CLI output.
+- [raztodo-web](https://pypi.org/project/raztodo-web/): Optional Web UI, installs on top of `raztodo` (`pip install raztodo-web`).
 
 ---
 

@@ -21,14 +21,11 @@ You can install **raztodo** using either `pip` or `pipx`. Choose the method that
 # CLI only
 pip install raztodo
 
-# CLI + optional web UI
-pip install "raztodo[web]"
-
 # CLI + bash/zsh completion support
 pip install "raztodo[completion]"
 
-# Install both optional extras
-pip install "raztodo[web,completion]"
+# Optional Web UI (separate package, installs on top of raztodo)
+pip install raztodo-web
 ```
 
 ### Using pipx
@@ -37,12 +34,13 @@ pip install "raztodo[web,completion]"
 # CLI only
 pipx install raztodo
 
-# CLI + optional web UI
-pipx install "raztodo[web]"
-
 # CLI + bash/zsh completion support
 pipx install "raztodo[completion]"
+
+# Optional Web UI (separate package)
+pipx install raztodo-web
 ```
+
 ### Uninstall
 
 ```bash
@@ -68,32 +66,28 @@ cd raztodo
 
 Editable installation allows you to test changes locally without reinstalling the package.
 
-#### Install ‍uv (if not already installed)
+#### Install uv (if not already installed)
 ```bash
 pip install uv
 ```
 
-#### Install the project in editable 
+#### Install the project in editable mode
 ```bash
 # CLI only
 uv sync --editable
 
-# CLI + optional web UI
-uv sync --editable --extra web
-
 # CLI + bash/zsh completion support
 uv sync --editable --extra completion
-
-# Install both optional extras
-uv sync --editable --extra web --extra completion
 ```
+
 This will:
 
 - Create a virtual environment `.venv`
-
 - Install the project in editable mode
-
 - Lock dependencies in `uv.lock`
+
+> The Web UI (`raztodo-web`) is a separate package with its own repository and its own local development setup; it is not an extra of this project.
+
 ---
 
 ## Installing Development Dependencies
@@ -101,13 +95,13 @@ This will:
 For testing, linting, and formatting:
 
 ```bash
-uv sync --group dev --extra web
+uv sync --group dev
 ```
 
 If you are working on bash/zsh completion locally, add the completion extra too:
 
 ```bash
-uv sync --group dev --extra web --extra completion
+uv sync --group dev --extra completion
 ```
 
 Now you can run commands via uv run:
@@ -160,13 +154,13 @@ Examples:
   rt search 'meeting' --project work
 
 Tips:
-  • Show command help: rt <command> --help
-  • Output in JSON mode when available for automation
+  - Show command help: rt <command> --help
+  - Output in JSON mode when available for automation
 ```
 
 If you see output like this, the installation was successful.
 
-To verify the optional web UI install, run:
+To verify the optional Web UI install, run:
 
 ```bash
 rt-web
@@ -174,6 +168,8 @@ rt-web
 
 This starts the local web UI at `http://127.0.0.1:8000`. Press `Ctrl+C` to stop it.
 
+---
+
 ## Docker (optional)
 
-An alternative to native installation is the Docker image, which supports both the CLI and the Web UI. See the [Docker Guide](DOCKER.md) for build, run, Compose, and persistence instructions.
+An alternative to native installation is the Docker image, which runs the RazTodo CLI (`rt`) directly. See the [Docker Guide](DOCKER.md) for build, run, and persistence instructions.

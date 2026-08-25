@@ -14,7 +14,7 @@ Clone the repository and install development dependencies (pytest, ty, ruff, cov
 ```bash
 git clone https://github.com/razbuild/raztodo.git
 cd raztodo
-uv sync --editable --group dev --extra web
+uv sync --group dev
 ```
 
 ---
@@ -46,7 +46,6 @@ uv run pytest tests/application/use_cases/test_create_task.py::TestCreateTaskUse
 # By subfolder
 uv run pytest tests/domain
 uv run pytest tests/infrastructure
-uv run pytest tests/presentation/web
 ```
 
 ## Checking Test Coverage

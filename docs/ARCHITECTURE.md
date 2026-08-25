@@ -1,11 +1,13 @@
 # Architecture
 
-RazTodo follows a Clean Architecture style so the core task logic stays independent from delivery mechanisms such as the CLI and the optional web UI.
+RazTodo follows a Clean Architecture style so the core task logic stays independent from delivery mechanisms such as the CLI.
 
 This improves:
 - **Testability**
 - **Maintainability**
 - **Extensibility**
+
+> The optional web UI is a separate package, [`raztodo-web`](https://pypi.org/project/raztodo-web/), that installs on top of `raztodo` and is not part of this repository. See its own documentation for its architecture.
 
 ---
 
@@ -16,7 +18,7 @@ This improves:
 | **Domain** | Core business rules, entities, and repository contracts |
 | **Application** | Queries and use cases that orchestrate task operations |
 | **Infrastructure** | SQLite persistence, LLM client, configuration, logging, and app wiring |
-| **Presentation** | User-facing interfaces: CLI and optional FastAPI web UI |
+| **Presentation** | User-facing interface: the `rt` CLI |
 
 Dependency direction points inward: presentation and infrastructure depend on application/domain, not the other way around.
 
@@ -45,18 +47,18 @@ Notes:
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI_or_Web
+    participant CLI
     participant Handler
     participant Repository
     participant SQLite
-    User->>CLI_or_Web: Request
-    CLI_or_Web->>Handler: Parsed command / API call
+    User->>CLI: Command
+    CLI->>Handler: Parsed command
     Handler->>Repository: Read or write tasks
     Repository->>SQLite: SQL operations
     SQLite-->>Repository: Rows / status
     Repository-->>Handler: Domain entities / result
-    Handler-->>CLI_or_Web: Outcome
-    CLI_or_Web-->>User: Rendered output / JSON response
+    Handler-->>CLI: Outcome
+    CLI-->>User: Rendered output / JSON response
 ```
 
 ---
@@ -131,49 +133,7 @@ src/
         │   ├── parser.py
         │   ├── protocols.py
         │   └── router.py
-        ├── __init__.py
-        └── web
-            ├── app.py
-            ├── dependencies.py
-            ├── __init__.py
-            ├── __main__.py
-            ├── routes
-            │   ├── explain.py      # SSE streaming endpoint for LLM explain
-            │   ├── __init__.py
-            │   └── tasks.py
-            ├── schemas.py
-            ├── static
-            │   ├── css
-            │   │   ├── style.css        # entrypoint: @imports all modules in dependency order
-            │   │   ├── tokens.css       # CSS custom properties / design tokens
-            │   │   ├── base.css         # box-sizing reset and base body styles
-            │   │   ├── layout.css       # app shell, main content area, filter tabs
-            │   │   ├── sidebar.css      # sidebar, navigation sections, logo
-            │   │   ├── forms.css        # inputs, selects, buttons, search widget
-            │   │   ├── tasks.css        # task list, items, badges, inline edit, empty state
-            │   │   ├── toast.css        # toast notification
-            │   │   ├── modal.css        # explain modal (loading, result, error states)
-            │   │   ├── theme.css        # light theme token overrides
-            │   │   └── responsive.css   # media queries / responsive rules
-            │   ├── img
-            │   │   └── favicon.ico
-            │   └── js
-            │       ├── app.js               # entrypoint: wires modules together, bootstraps the app
-            │       ├── explain
-            │       │   ├── index.js         # explain feature public surface
-            │       │   └── modal.js         # explain modal UI + SSE token rendering
-            │       ├── shared
-            │       │   ├── api.js           # fetch wrappers for the /api/tasks endpoints
-            │       │   ├── state.js         # shared client-side app state
-            │       │   ├── theme.js         # light/dark theme toggling
-            │       │   └── toast.js         # toast notification helper
-            │       └── tasks
-            │           ├── actions.js       # create/update/delete/mark-done action handlers
-            │           ├── edit.js          # inline task editing UI logic
-            │           ├── index.js         # tasks feature public surface
-            │           └── render.js        # task list/item DOM rendering
-            └── templates
-                └── index.html
+        └── __init__.py
 ```
 
 ---
@@ -225,7 +185,7 @@ This layer implements task operations, split into two categories by intent:
 | `clear_tasks.py` | Delete all tasks |
 | `migrate_tasks.py` | Run SQLite migrations |
 
-`factory.py` provides lazy construction of these queries and use cases for the CLI and web layers.
+`factory.py` provides lazy construction of these queries and use cases for the CLI.
 
 ---
 
@@ -251,7 +211,7 @@ Encapsulates all Ollama communication. Uses only Python stdlib (`http.client`, `
 | File | Purpose |
 |------|---------|
 | `config.py` | Loads and persists LLM settings from `llm.json` in the data directory |
-| `client.py` | `chat()` (blocking, used by CLI) and `stream_chat()` (token generator, used by web SSE endpoint) |
+| `client.py` | `chat()`, used by the CLI's `explain` command |
 
 Config file location follows the same platform logic as `settings.py`:
 
@@ -285,68 +245,6 @@ Important files:
 - `entrypoint.py`: runs the CLI flow
 - `handlers/`: command-specific parsers and handlers, all following the `<name>_handler.py` naming convention (e.g. `create_task_handler.py`, `completion_handler.py`). Each handler is named after the query/use case it invokes, except `completion_handler.py`, which implements shell completion and isn't tied to a single query/use case.
 
-### Web UI / API
-
-**Directory:** `src/raztodo/presentation/web/`
-
-Optional FastAPI-based web interface (API + lightweight frontend).
-
-Important files:
-- `__main__.py`: launches the local Uvicorn server
-- `app.py`: FastAPI application setup, router registration, and static/template configuration
-- `dependencies.py`: query/use-case wiring for the API layer
-- `static/`: frontend assets (JavaScript, CSS)
-- `templates/`: HTML templates
-- `routes/tasks.py`: JSON API endpoints under `/api/tasks`
-- `routes/explain.py`: SSE streaming endpoint (`GET /api/tasks/{id}/explain`) that streams Ollama tokens to the browser as they arrive
-- `schemas.py`: request/response models
-
-The web layer is split into two logical parts:
-- **API layer**: FastAPI routes and schemas handling JSON-based task operations and LLM streaming
-- **Frontend layer**: static assets and HTML; the explain modal renders tokens progressively via `fetch` + `ReadableStream`
-
-The web UI is optional and only available when RazTodo is installed with the `web` extra.
-
-#### Frontend JS modules
-
-**Directory:** `src/raztodo/presentation/web/static/js/`
-
-The frontend JavaScript, previously a single monolithic `app.js`, is now split into focused ES modules grouped by feature:
-
-| Path | Purpose |
-|------|---------|
-| `app.js` | Entrypoint; wires feature modules together and bootstraps the page |
-| `shared/api.js` | Fetch wrappers around the `/api/tasks` endpoints |
-| `shared/state.js` | Shared client-side application state |
-| `shared/theme.js` | Light/dark theme toggling |
-| `shared/toast.js` | Toast notification helper |
-| `tasks/index.js` | Public surface of the tasks feature |
-| `tasks/actions.js` | Create/update/delete/mark-done action handlers |
-| `tasks/edit.js` | Inline task editing UI logic |
-| `tasks/render.js` | Task list/item DOM rendering |
-| `explain/index.js` | Public surface of the explain feature |
-| `explain/modal.js` | Explain modal UI and SSE token rendering |
-
-#### Frontend CSS modules
-
-**Directory:** `src/raztodo/presentation/web/static/css/`
-
-The frontend CSS, previously a single monolithic `style.css` (968 lines), is now split into focused modules organized by responsibility. `style.css` acts as a thin entrypoint that `@import`s all modules in dependency order; no changes to HTML or JavaScript were required.
-
-| File | Responsibility |
-|------|----------------|
-| `style.css` | Entrypoint — `@import`s all modules in dependency order |
-| `tokens.css` | CSS custom properties (colours, radii, transitions, typography) |
-| `base.css` | Box-sizing reset and base `body` styles |
-| `layout.css` | App shell (`display: flex`), main content area, filter tabs |
-| `sidebar.css` | Sidebar panel, navigation sections, logo |
-| `forms.css` | Inputs, selects, buttons, search widget |
-| `tasks.css` | Task list, task items, priority/tag badges, inline edit form, empty state |
-| `toast.css` | Toast notification (show/hide animation, error variant) |
-| `modal.css` | Explain modal — all states: loading spinner, streamed result, error |
-| `theme.css` | Light-theme token overrides (`[data-theme="light"]`) |
-| `responsive.css` | `@media (max-width: 900px)` rules for narrow viewports |
-
 ---
 
 ## LLM Explain Flow
@@ -354,32 +252,19 @@ The frontend CSS, previously a single monolithic `style.css` (968 lines), is now
 ```mermaid
 sequenceDiagram
     participant User
-    participant CLI_or_Browser
+    participant CLI
     participant ExplainQuery
     participant OllamaClient
     participant Ollama
 
-    User->>CLI_or_Browser: rt explain 5 --deep  /  click Explain
-
-    alt CLI (blocking)
-        CLI_or_Browser->>ExplainQuery: execute(task_id, mode)
-        ExplainQuery->>OllamaClient: chat(prompt)
-        OllamaClient->>Ollama: POST /api/chat  stream=false
-        Ollama-->>OllamaClient: Full response
-        OllamaClient-->>ExplainQuery: str
-        ExplainQuery-->>CLI_or_Browser: str
-        CLI_or_Browser-->>User: Printed output
-    else Web (SSE streaming)
-        CLI_or_Browser->>ExplainQuery: stream(task_id, mode)
-        ExplainQuery->>OllamaClient: stream_chat(prompt)
-        OllamaClient->>Ollama: POST /api/chat  stream=true
-        loop token by token
-            Ollama-->>OllamaClient: NDJSON chunk
-            OllamaClient-->>ExplainQuery: yield token
-            ExplainQuery-->>CLI_or_Browser: SSE data: token
-            CLI_or_Browser-->>User: Token appended to modal
-        end
-    end
+    User->>CLI: rt explain 5 --deep
+    CLI->>ExplainQuery: execute(task_id, mode)
+    ExplainQuery->>OllamaClient: chat(prompt)
+    OllamaClient->>Ollama: POST /api/chat  stream=false
+    Ollama-->>OllamaClient: Full response
+    OllamaClient-->>ExplainQuery: str
+    ExplainQuery-->>CLI: str
+    CLI-->>User: Printed output
 ```
 
 ---
@@ -387,9 +272,8 @@ sequenceDiagram
 ## Runtime Entry Points
 
 - `rt` → `raztodo.__main__:main`
-- `rt-web` → `raztodo.presentation.web.__main__:main`
 
-`rt-web` starts a local server on `127.0.0.1:8000` by default.
+The `rt-web` launcher (`raztodo.presentation.web.__main__:main`) is provided by the separate `raztodo-web` package, not by `raztodo` itself.
 
 ---
 
@@ -402,7 +286,6 @@ Tests mirror the architecture:
 - `tests/domain/`
 - `tests/infrastructure/`
 - `tests/presentation/cli/`
-- `tests/presentation/web/`
 
 This keeps behavior checks close to the layer they validate.
 
@@ -415,4 +298,6 @@ RazTodo's architecture separates task logic from storage and interface concerns:
 - the domain models the problem space
 - the application layer orchestrates workflows, split into read-only **queries** and mutating **use cases**
 - the infrastructure layer handles persistence and LLM integration
-- the presentation layer handles CLI and HTTP/API + web UI rendering, with the web frontend now organized into focused `shared/`, `tasks/`, and `explain/` JS modules instead of a single monolithic file
+- the presentation layer handles the CLI
+
+The web UI, provided by the separate `raztodo-web` package, builds on the same core (`application`/`domain`) but is documented in that package's own repository.

@@ -1,6 +1,6 @@
 # Usage Guide
 
-Complete reference for the `rt` CLI and the optional `rt-web` launcher.
+Complete reference for the `rt` CLI. The optional `rt-web` launcher is provided by the separate `raztodo-web` package.
 
 ---
 
@@ -366,10 +366,10 @@ rt list --due-before 2025-02-01
 
 ## Optional Web UI
 
-If you install the optional `web` extra, RazTodo also provides the `rt-web` launcher:
+`raztodo-web` is a separate package that installs on top of `raztodo` and adds the `rt-web` launcher:
 
 ```bash
-pip install "raztodo[web]"
+pip install raztodo-web
 rt-web
 ```
 

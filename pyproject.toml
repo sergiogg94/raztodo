@@ -1,7 +1,7 @@
 [project]
 name = "raztodo"
-version = "0.10.0"
-description = "A local-first task manager for developers with a native CLI, optional Web UI, and local AI assistance powered by Ollama."
+version = "0.11.0"
+description = "A local-first task manager for developers, with a native CLI and local AI assistance powered by Ollama."
 readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
 license = "MIT"
@@ -15,9 +15,8 @@ keywords = [
     "local-first",
     "ollama",
     "llm",
-    "web-ui",
-    "fastapi",
 ]
+
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: End Users/Desktop",
@@ -42,22 +41,10 @@ Changelog = "https://github.com/razbuild/raztodo/releases"
 
 [project.scripts]
 rt = "raztodo.__main__:main"
-rt-web = "raztodo.presentation.web.__main__:main"
 
 [project.optional-dependencies]
-web = [
-    "fastapi>=0.138.0",
-    "uvicorn[standard]>=0.49.0",
-    "httpx2>=2.4.0",
-]
 completion = [
-    "argcomplete",
-]
-all = [
-    "fastapi>=0.138.0",
-    "uvicorn[standard]>=0.49.0",
-    "httpx2>=2.4.0",
-    "argcomplete",
+    "argcomplete"
 ]
 
 [build-system]
@@ -65,9 +52,7 @@ requires = ["uv_build >= 0.11.24, < 0.13.0"]
 build-backend = "uv_build"
 
 [dependency-groups]
-dev = ["pytest", "ruff", "ty", "coverage", "httpx2"]
-test = ["pytest", "httpx2"]
-coverage = ["coverage"]
+dev = ["pytest", "ruff", "ty", "coverage"]
 
 [tool.pytest.ini_options]
 addopts = ["--strict-config", "--strict-markers"]

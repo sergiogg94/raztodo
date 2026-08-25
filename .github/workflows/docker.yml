@@ -21,74 +21,50 @@ jobs:
         uses: docker/setup-buildx-action@v4.2.0
 
       - name: Build Docker image
-        run: docker build --build-arg USER_UID=$(id -u) --build-arg USER_GID=$(id -g) -t raztodo:test .
+        run: |
+          docker build \
+            --build-arg USER_UID=$(id -u) \
+            --build-arg USER_GID=$(id -g) \
+            -t raztodo:test .
 
       - name: Test Docker CLI
         run: |
-          mkdir -p ./raztodo-data
-          docker run --rm -v $PWD/raztodo-data:/data raztodo:test add "CI test task"
-          docker run --rm -v $PWD/raztodo-data:/data raztodo:test list
-          ls ./raztodo-data
+          docker run --rm raztodo:test --help
+          docker run --rm raztodo:test --version
 
-      - name: Test Docker Web UI, shared DB and persistence
+      - name: Test Docker persistence
         run: |
-          docker volume rm raztodo-ci-data || true
+          set -e
 
-          # Start Web UI on host port 18000
-          docker run -d --name raztodo-ci-web -p 18000:8000 -v raztodo-ci-data:/data raztodo:test rt-web
+          volume=raztodo-ci-data
 
-          # Wait for the server to accept requests
-          for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:18000/ >/dev/null 2>&1; then
-              break
-            fi
-            sleep 1
-          done
-          curl -fsS http://127.0.0.1:18000/ >/dev/null
+          docker volume rm "$volume" 2>/dev/null || true
+          trap 'docker volume rm "$volume" 2>/dev/null || true' EXIT
 
-          # Add a task via CLI against the same volume, then verify via the Web API
-          docker run --rm -v raztodo-ci-data:/data raztodo:test add "Shared DB task"
-          docker run --rm -v raztodo-ci-data:/data raztodo:test list | grep "Shared DB task"
-          curl -fsS http://127.0.0.1:18000/api/tasks | grep "Shared DB task"
+          docker run --rm \
+            -v "$volume:/data" \
+            raztodo:test \
+            add "CI test task"
 
-          # Recreate the container and confirm the DB persisted
-          docker stop raztodo-ci-web
-          docker rm raztodo-ci-web
-          docker run -d --name raztodo-ci-web2 -p 18000:8000 -v raztodo-ci-data:/data raztodo:test rt-web
-          sleep 3
-          curl -fsS http://127.0.0.1:18000/api/tasks | grep "Shared DB task"
+          docker run --rm \
+            -v "$volume:/data" \
+            raztodo:test \
+            list | grep -F "CI test task"
 
-          docker stop raztodo-ci-web2
-          docker rm raztodo-ci-web2
-          docker volume rm raztodo-ci-data
-
-      - name: Test Docker Compose setup
+      - name: Test non-root user
         run: |
-          docker compose up -d
+          test "$(docker run --rm \
+            --entrypoint id \
+            raztodo:test \
+            -un)" = "raztodo"
+            
+      - name: Test Docker data permissions
+        run: |
+          docker volume rm raztodo-ci-permissions 2>/dev/null || true
+          trap 'docker volume rm raztodo-ci-permissions 2>/dev/null || true' EXIT
 
-          # Wait for the server to accept requests
-          for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8000/ >/dev/null 2>&1; then
-              break
-            fi
-            sleep 1
-          done
-          curl -fsS http://127.0.0.1:8000/ >/dev/null
-
-          # Add a task via the compose CLI service and verify it through the Web API
-          docker compose run --rm cli add "Compose smoke task"
-          curl -fsS http://127.0.0.1:8000/api/tasks | grep "Compose smoke task"
-
-          # Restart the stack and confirm the data persisted
-          docker compose stop
-          docker compose up -d
-          for i in $(seq 1 30); do
-            if curl -fsS http://127.0.0.1:8000/api/tasks >/dev/null 2>&1; then
-              break
-            fi
-            sleep 1
-          done
-          curl -fsS http://127.0.0.1:8000/api/tasks | grep "Compose smoke task"
-
-          # Tear down (including the named volume) to leave a clean state
-          docker compose down -v
+          docker run --rm \
+            -v raztodo-ci-permissions:/data \
+            --entrypoint sh \
+            raztodo:test \
+            -c 'touch /data/permission-test && test -f /data/permission-test'
