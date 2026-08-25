@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.11.0] - 2026-08-26
+
+### Changed
+
+- Separated the Web UI from the core RazTodo repository into a standalone companion project
+- Simplified the Docker image to focus on the RazTodo CLI
+- Changed the Docker entrypoint to expose the `rt` command directly
+- Simplified Docker usage to support commands such as `rt add`, `rt list`, and `rt done`
+- Updated the project architecture to reflect the CLI-first core and standalone Web UI
+- Simplified installation and dependency configuration by removing Web UI dependencies from the core package
+- Updated Docker, installation, usage, architecture, and testing documentation
+- Updated CI workflows for the CLI-focused project structure
+- Added Docker image build, persistence, and non-root user tests to CI
+
+### Removed
+
+- Removed the Web UI implementation from the core repository
+- Removed `compose.yaml` and Docker Compose configuration
+- Removed `docker-entrypoint.sh`
+- Removed Web UI-specific dependencies and configuration
+- Removed Web UI tests and frontend assets from the core repository
+
+---
+
 ## [0.10.0] - 2026-08-22
 
 ### Added
