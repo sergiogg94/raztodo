@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- Docker wrapper scripts (`docker/rt-docker.sh` for Linux/macOS and `docker/rt-docker.ps1` for Windows) that delegate `rt` commands to a persistent Docker container automatically, so you can use the tool without installing it on the host
+
 ## [0.11.0] - 2026-08-26
 
 ### Changed
