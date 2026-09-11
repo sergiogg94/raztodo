@@ -53,7 +53,7 @@ function Start-RtDocker {
     $imageExists = docker image inspect $script:RtDockerImage 2>$null
     if (-not $imageExists) {
         Write-Error "Image `"$($script:RtDockerImage)`" not found. Build it first:"
-        Write-Error "  docker build --build-arg USER_UID=`$(id -u) --build-arg USER_GID=`$(id -g) -t $($script:RtDockerImage) $($script:RtDockerProjectDir)"
+        Write-Error "  docker build -t $($script:RtDockerImage) $($script:RtDockerProjectDir)"
         return 1
     }
 
@@ -109,8 +109,6 @@ function Get-RtDockerStatus {
 function Invoke-RtDockerRebuild {
     Stop-RtDocker | Out-Host
     docker build `
-        --build-arg USER_UID=$(id -u) `
-        --build-arg USER_GID=$(id -g) `
         -t $script:RtDockerImage `
         $script:RtDockerProjectDir
     if ($LASTEXITCODE -ne 0) { return 1 }
