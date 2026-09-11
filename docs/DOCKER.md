@@ -131,6 +131,7 @@ Then use `rt` exactly as above. Manage the container with:
 Invoke-RtDocker status
 Invoke-RtDocker start
 Invoke-RtDocker stop
+Invoke-RtDocker rebuild
 ```
 
 ### Configuration

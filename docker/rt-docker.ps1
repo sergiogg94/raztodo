@@ -22,13 +22,14 @@
 #   Start-RtDocker       # create (if needed) and start the container
 #   Stop-RtDocker        # stop and remove the container
 #   Get-RtDockerStatus   # show whether the container is running
-#   Invoke-RtDocker      # manage lifecycle via subcommand: start|stop|status
+#   Invoke-RtDocker      # manage lifecycle via subcommand: start|stop|status|rebuild
 #
 # Configuration (environment variables, all optional):
 #   RAZTODO_DOCKER_IMAGE       Image name (default: raztodo:local)
 #   RAZTODO_DOCKER_CONTAINER   Container name (default: raztodo)
 #   RAZTODO_DATA_DIR           Host data directory mounted at /data (default: $HOME\raztodo-data)
 
+$script:RtDockerProjectDir = Split-Path (Split-Path $PSCommandPath -Parent) -Parent
 $script:RtDockerImage = if ($env:RAZTODO_DOCKER_IMAGE)   { $env:RAZTODO_DOCKER_IMAGE }   else { "raztodo:local" }
 $script:RtDockerContainer = if ($env:RAZTODO_DOCKER_CONTAINER) { $env:RAZTODO_DOCKER_CONTAINER } else { "raztodo" }
 $script:RtDataDir = if ($env:RAZTODO_DATA_DIR) { $env:RAZTODO_DATA_DIR } else { Join-Path $HOME "raztodo-data" }
@@ -52,12 +53,16 @@ function Start-RtDocker {
     $imageExists = docker image inspect $script:RtDockerImage 2>$null
     if (-not $imageExists) {
         Write-Error "Image `"$($script:RtDockerImage)`" not found. Build it first:"
-        Write-Error "  docker build -t $($script:RtDockerImage) ."
+        Write-Error "  docker build --build-arg USER_UID=`$(id -u) --build-arg USER_GID=`$(id -g) -t $($script:RtDockerImage) $($script:RtDockerProjectDir)"
         return 1
     }
 
     if (Get-RtDockerExists) {
         docker start $script:RtDockerContainer | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to start container `"$($script:RtDockerContainer)`"."
+            return 1
+        }
         Write-Output "Started RazTodo container `"$($script:RtDockerContainer)`"."
         return 0
     }
@@ -69,6 +74,10 @@ function Start-RtDocker {
         --entrypoint sleep `
         $script:RtDockerImage `
         infinity | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "Failed to create container `"$($script:RtDockerContainer)`"."
+        return 1
+    }
 
     Write-Output "Created and started RazTodo container `"$($script:RtDockerContainer)`"."
     Write-Output "Database is persisted at $($script:RtDataDir)\tasks.db"
@@ -78,6 +87,10 @@ function Start-RtDocker {
 function Stop-RtDocker {
     if (Get-RtDockerExists) {
         docker rm -f $script:RtDockerContainer | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "Failed to remove container `"$($script:RtDockerContainer)`"."
+            return 1
+        }
         Write-Output "Stopped and removed RazTodo container `"$($script:RtDockerContainer)`"."
     } else {
         Write-Output "RazTodo container `"$($script:RtDockerContainer)`" does not exist."
@@ -93,16 +106,28 @@ function Get-RtDockerStatus {
     }
 }
 
+function Invoke-RtDockerRebuild {
+    Stop-RtDocker | Out-Host
+    docker build `
+        --build-arg USER_UID=$(id -u) `
+        --build-arg USER_GID=$(id -g) `
+        -t $script:RtDockerImage `
+        $script:RtDockerProjectDir
+    if ($LASTEXITCODE -ne 0) { return 1 }
+    Start-RtDocker | Out-Host
+}
+
 function Invoke-RtDocker {
     param(
         [Parameter(Position = 0)]
-        [ValidateSet("start", "stop", "status")]
+        [ValidateSet("start", "stop", "status", "rebuild")]
         [string]$Command = "status"
     )
     switch ($Command) {
-        "start"  { Start-RtDocker }
-        "stop"   { Stop-RtDocker }
-        "status" { Get-RtDockerStatus }
+        "start"   { Start-RtDocker }
+        "stop"    { Stop-RtDocker }
+        "status"  { Get-RtDockerStatus }
+        "rebuild" { Invoke-RtDockerRebuild }
     }
 }
 
@@ -118,7 +143,10 @@ function rt {
         if (-not (Get-RtDockerRunning)) { return 1 }
     }
 
-    docker exec $script:RtDockerContainer rt @args
+    $execArgs = @("exec", "-i")
+    if ([Console]::IsOutputRedirected -eq $false) { $execArgs += "-t" }
+    $execArgs += @($script:RtDockerContainer, "rt") + @args
+    docker exec @execArgs
     return $LASTEXITCODE
 }
 
